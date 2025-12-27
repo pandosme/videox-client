@@ -27,7 +27,6 @@ import {
 } from '@mui/material';
 import {
   Storage as StorageIcon,
-  Folder as FolderIcon,
   Refresh as RefreshIcon,
   Warning as WarningIcon,
   Info as InfoIcon,
@@ -43,7 +42,6 @@ import { formatDateTime, formatDate as formatDateUtil } from '../utils/dateForma
 
 function Storage() {
   const [stats, setStats] = useState(null);
-  const [pathInfo, setPathInfo] = useState(null);
   const [cleanupPreview, setCleanupPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [integrityDialog, setIntegrityDialog] = useState(false);
@@ -80,13 +78,9 @@ function Storage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsData, pathData] = await Promise.all([
-        storageService.getStorageStats(),
-        storageService.getStoragePath(),
-      ]);
+      const statsData = await storageService.getStorageStats();
 
       setStats(statsData);
-      setPathInfo(pathData);
 
       // Load cleanup preview if admin/operator
       if (user?.role === 'admin' || user?.role === 'operator') {
@@ -244,25 +238,75 @@ function Storage() {
       </Box>
 
       <Grid container spacing={3}>
-        {/* Storage Path */}
+        {/* Per-Camera Breakdown */}
         <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <FolderIcon color="primary" />
-                <Typography variant="h6">Storage Location</Typography>
-              </Box>
-              <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'grey.900', color: 'grey.100', p: 1, borderRadius: 1 }}>
-                {pathInfo.currentPath}
+              <Typography variant="h6" gutterBottom>
+                Storage by Camera
               </Typography>
-              {pathInfo.configuredPath && pathInfo.configuredPath !== pathInfo.currentPath && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
-                  <strong>Pending Change:</strong> New path "{pathInfo.configuredPath}" will be used after restart.
-                </Alert>
+              {stats.perCamera.length === 0 ? (
+                <Alert severity="info">No cameras with recordings</Alert>
+              ) : (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Camera</TableCell>
+                        <TableCell align="right">Continuous Segments</TableCell>
+                        <TableCell align="right">Size (GB)</TableCell>
+                        <TableCell align="right">Retention (Days)</TableCell>
+                        <TableCell>Oldest</TableCell>
+                        <TableCell>Newest</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {stats.perCamera.map((camera) => (
+                        <TableRow key={camera.cameraId}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <VideocamIcon fontSize="small" color="action" />
+                              {camera.cameraName}
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={camera.continuousSegments || 0}
+                              size="small"
+                              color={camera.continuousSegments <= 5 ? 'success' : camera.continuousSegments <= 20 ? 'warning' : 'default'}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            {camera.sizeGB.toFixed(2)}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip label={camera.retentionDays} size="small" />
+                          </TableCell>
+                          <TableCell>{formatDate(camera.oldestRecording)}</TableCell>
+                          <TableCell>{formatDate(camera.newestRecording)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               )}
             </CardContent>
           </Card>
         </Grid>
+
+        {/* Cleanup Preview */}
+        {cleanupPreview && cleanupPreview.count > 0 && (
+          <Grid item xs={12}>
+            <Alert severity="warning" icon={<WarningIcon />}>
+              <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                Retention Cleanup Preview
+              </Typography>
+              <Typography variant="body2">
+                {cleanupPreview.count} recordings ({cleanupPreview.totalSizeGB} GB) are scheduled for automatic deletion based on retention policies.
+              </Typography>
+            </Alert>
+          </Grid>
+        )}
 
         {/* Disk Usage */}
         <Grid item xs={12} md={6}>
@@ -339,75 +383,6 @@ function Storage() {
           </Card>
         </Grid>
 
-        {/* Cleanup Preview */}
-        {cleanupPreview && cleanupPreview.count > 0 && (
-          <Grid item xs={12}>
-            <Alert severity="warning" icon={<WarningIcon />}>
-              <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                Retention Cleanup Preview
-              </Typography>
-              <Typography variant="body2">
-                {cleanupPreview.count} recordings ({cleanupPreview.totalSizeGB} GB) are scheduled for automatic deletion based on retention policies.
-              </Typography>
-            </Alert>
-          </Grid>
-        )}
-
-        {/* Per-Camera Breakdown */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Storage by Camera
-              </Typography>
-              {stats.perCamera.length === 0 ? (
-                <Alert severity="info">No cameras with recordings</Alert>
-              ) : (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Camera</TableCell>
-                        <TableCell align="right">Continuous Segments</TableCell>
-                        <TableCell align="right">Size (GB)</TableCell>
-                        <TableCell align="right">Retention (Days)</TableCell>
-                        <TableCell>Oldest</TableCell>
-                        <TableCell>Newest</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {stats.perCamera.map((camera) => (
-                        <TableRow key={camera.cameraId}>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <VideocamIcon fontSize="small" color="action" />
-                              {camera.cameraName}
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Chip
-                              label={camera.continuousSegments || 0}
-                              size="small"
-                              color={camera.continuousSegments <= 5 ? 'success' : camera.continuousSegments <= 20 ? 'warning' : 'default'}
-                            />
-                          </TableCell>
-                          <TableCell align="right">
-                            {camera.sizeGB.toFixed(2)}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Chip label={camera.retentionDays} size="small" />
-                          </TableCell>
-                          <TableCell>{formatDate(camera.oldestRecording)}</TableCell>
-                          <TableCell>{formatDate(camera.newestRecording)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
 
       {/* Integrity Check Results Dialog */}
