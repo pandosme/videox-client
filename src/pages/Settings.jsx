@@ -12,6 +12,8 @@ import {
   InputLabel,
 } from '@mui/material';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
+import ApiKeysManager from '../components/settings/ApiKeysManager';
 
 function Settings() {
   const [dateTimeFormat, setDateTimeFormat] = useState(
@@ -19,6 +21,7 @@ function Settings() {
   );
 
   const { success } = useToast();
+  const { isAdmin } = useAuth();
 
   const handleDateTimeFormatChange = (format) => {
     setDateTimeFormat(format);
@@ -77,6 +80,13 @@ function Settings() {
             </CardContent>
           </Card>
         </Grid>
+
+        {/* API Keys Management Section - Admin Only */}
+        {isAdmin && (
+          <Grid item xs={12}>
+            <ApiKeysManager />
+          </Grid>
+        )}
       </Grid>
     </Container>
   );
