@@ -2,7 +2,8 @@
 
 Web-based management interface for the VideoX recording engine. This client lets administrators and integrators manage Axis cameras, monitor status, and browse recordings stored on an existing VideoX server.
 
-**Important**: VideoX is a recording engine, not a full VMS. This repository contains only the client. A VideoX server must already be installed and reachable before deploying this client. 
+**Important**: VideoX is a recording engine, not a full VMS. This repository contains only the client. A VideoX server must already be installed and reachable before deploying this client.   
+
 VideoX Server: https://github.com/pandosme/videox
 
 The client can access several VideoX Servers when logging in.
