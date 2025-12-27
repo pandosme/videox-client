@@ -355,7 +355,7 @@ function Storage() {
               </Box>
               <Grid container spacing={2}>
                 <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Total Count</Typography>
+                  <Typography variant="body2" color="text.secondary">Total Count (1 minute segments)</Typography>
                   <Typography variant="h5">{stats.recordings.totalCount.toLocaleString()}</Typography>
                 </Grid>
                 <Grid item xs={6}>
@@ -363,7 +363,7 @@ function Storage() {
                   <Typography variant="h5">{stats.recordings.totalSizeGB} GB</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Average Size</Typography>
+                  <Typography variant="body2" color="text.secondary">Average Size (1 minute segments)</Typography>
                   <Typography variant="body1">{stats.recordings.avgSizeMB} MB</Typography>
                 </Grid>
                 <Grid item xs={6}>
