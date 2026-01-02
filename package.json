@@ -1,6 +1,6 @@
 {
   "name": "videox-frontend",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "VideoX Video Management System - Frontend",
   "type": "module",
   "scripts": {

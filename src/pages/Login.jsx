@@ -126,9 +126,16 @@ function Login() {
   };
 
   const handleSaveServer = () => {
-    if (!serverForm.name || !serverForm.address) {
-      showError('Name and address are required');
+    if (!serverForm.name) {
+      showError('Server name is required');
       return;
+    }
+
+    // Address can be empty for same-origin mode, but show warning
+    if (!serverForm.address) {
+      if (!window.confirm('No address specified - this will use same-origin mode (relative URLs). Continue?')) {
+        return;
+      }
     }
 
     if (editingServer) {
@@ -219,7 +226,7 @@ function Login() {
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body1">{server.name}</Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {serverConfigService.getServerUrl(server)}
+                              {serverConfigService.getServerDisplayUrl(server)}
                             </Typography>
                           </Box>
                           <Box onClick={(e) => e.stopPropagation()}>
@@ -282,7 +289,7 @@ function Login() {
                       {selectedServer?.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {serverConfigService.getServerUrl(selectedServer)}
+                      {serverConfigService.getServerDisplayUrl(selectedServer)}
                     </Typography>
                   </Box>
                   <IconButton size="small" onClick={() => handleEditServer(selectedServer)}>
@@ -355,8 +362,8 @@ function Login() {
             value={serverForm.address}
             onChange={(e) => setServerForm({ ...serverForm, address: e.target.value })}
             margin="normal"
-            placeholder="192.168.1.100 or videox.example.com"
-            helperText="IP address or hostname"
+            placeholder="192.168.1.100, videox.example.com, or 'same-origin'"
+            helperText="IP/hostname for direct connection, or 'same-origin' for nginx reverse proxy"
           />
           <TextField
             fullWidth
@@ -383,10 +390,21 @@ function Login() {
             fullWidth
             variant="outlined"
             onClick={handleTestConnection}
-            disabled={testingConnection || !serverForm.address}
+            disabled={
+              testingConnection ||
+              !serverForm.address ||
+              serverForm.address === 'same-origin' ||
+              serverForm.address === 'local'
+            }
             startIcon={testingConnection ? <CircularProgress size={20} /> : null}
           >
-            {testingConnection ? 'Testing Connection...' : 'Test Connection'}
+            {testingConnection
+              ? 'Testing Connection...'
+              : !serverForm.address ||
+                serverForm.address === 'same-origin' ||
+                serverForm.address === 'local'
+              ? 'Test Connection (Not available for same-origin mode)'
+              : 'Test Connection'}
           </Button>
 
           {connectionTestResult && (
@@ -404,7 +422,7 @@ function Login() {
           <Button
             onClick={handleSaveServer}
             variant="contained"
-            disabled={!serverForm.name || !serverForm.address}
+            disabled={!serverForm.name}
           >
             {editingServer ? 'Update' : 'Add'}
           </Button>

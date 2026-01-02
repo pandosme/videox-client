@@ -136,11 +136,26 @@ export const clearSelectedServer = () => {
 /**
  * Get the API base URL for a server
  * @param {Object} server - Server configuration
- * @returns {string} Base URL
+ * @returns {string|null} Base URL or null for same-origin (proxy) mode
  */
 export const getServerUrl = (server) => {
+  // Same-origin mode: use relative URLs (for nginx reverse proxy setups)
+  if (!server.address || server.address === 'same-origin' || server.address === 'local') {
+    return null;
+  }
+
   const protocol = server.useTLS ? 'https' : 'http';
   return `${protocol}://${server.address}:${server.port}`;
+};
+
+/**
+ * Get display text for a server URL (for UI purposes)
+ * @param {Object} server - Server configuration
+ * @returns {string} Display text
+ */
+export const getServerDisplayUrl = (server) => {
+  const url = getServerUrl(server);
+  return url || 'Same-origin (proxy mode)';
 };
 
 /**

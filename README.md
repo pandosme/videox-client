@@ -44,62 +44,114 @@ By default the development server listens on `http://localhost:5173`. Configure 
 
 ## Production Installation
 
-### 1. Build the Client
+### Architecture Overview
 
-On a build machine or deployment host:
+The VideoX client is a static web application that runs in users' browsers and can connect to VideoX backend servers in two ways:
+
+### Option 1: Direct Connection (Multiple Servers)
+
+Best for: Managing multiple independent VideoX servers with different domains/IPs
+
+- **Frontend (this client)**: Served on port 3302 (e.g., `client.example.com:3302`)
+- **VideoX Backend(s)**: Each server on port 3002 (e.g., `server1.example.com:3002`, `server2.example.com:3002`)
+- **Communication**: Browser → VideoX servers (direct HTTP/HTTPS connections)
+- **CORS**: Required on each backend server
 
 ```
+┌─────────────────────────────────────────┐
+│  Client Browser                         │
+│  (Accesses client.example.com:3302)    │
+└──────────────┬──────────────────────────┘
+               │
+               ├─→ server1.example.com:3002
+               ├─→ server2.example.com:3002
+               └─→ server3.example.com:3002
+```
+
+**Setup Guide**: See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+
+### Option 2: Nginx Reverse Proxy (Same Domain)
+
+Best for: Single domain serving both frontend and backend through nginx
+
+- **Frontend and Backend**: Both accessed through same domain (e.g., `videox.app`)
+- **Nginx routes**: `/api/` and `/hls/` → Backend, `/` → Frontend
+- **Communication**: Browser → Nginx → Backend (same-origin, no CORS needed)
+- **Benefits**: Simplified SSL, centralized access control, no CORS issues
+
+```
+┌──────────────────────────────┐
+│      User Browser            │
+│  (https://videox.app)        │
+└──────────┬───────────────────┘
+           │
+           ▼
+┌──────────────────────────────┐
+│   Nginx Reverse Proxy        │
+│      (videox.app)            │
+├──────────────────────────────┤
+│ /api/ → Backend:3002        │
+│ /     → Frontend:3302        │
+└──────────────────────────────┘
+```
+
+**Setup Guide**: See [DEPLOYMENT-NGINX-PROXY.md](DEPLOYMENT-NGINX-PROXY.md) for detailed instructions.
+
+## Quick Build Instructions
+
+For either deployment option:
+
+```bash
+# Clone and build
 git clone https://github.com/pandosme/videox-client
 cd videox-client
-
 npm install
-npm run build
+npm run build  # Production build → dist/
+
+# Or run development server
+npm run dev    # Runs on port 3302
 ```
 
-The production build is created in the `dist/` directory. 
-
-### 2. Deploy as Static Files (Nginx Example)
-
-Copy the built files to your web root:
-
-```
-sudo mkdir -p /var/www/videox-client
-sudo cp -r dist/* /var/www/videox-client/
-```
-
-Example Nginx configuration:
-
-```
-server {
-    listen 80;
-    server_name videox-client.example.com;
-
-    root /var/www/videox-client;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Optional: gzip for better performance
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-}
-```
-
-Reload Nginx:
-
-```
-sudo nginx -t
-sudo systemctl reload nginx
-```
+Choose your deployment architecture and follow the appropriate guide:
+- **Multiple servers with different domains**: [DEPLOYMENT.md](DEPLOYMENT.md)
+- **Single domain with nginx reverse proxy**: [DEPLOYMENT-NGINX-PROXY.md](DEPLOYMENT-NGINX-PROXY.md)
 
 ## Security and Network Notes
 
-- Deploy the client over HTTPS in production.
-- Ensure that the client origin is allowed by the VideoX server’s CORS policy.
-- Restrict access to the client and VideoX server to trusted networks or via VPN/reverse proxy.
-- Do not expose the VideoX server or client directly to the internet without proper access control and TLS termination.
+### CORS Configuration
+
+**For Direct Connection (Option 1):**
+
+Each VideoX backend must be configured to allow CORS requests from the client's domain:
+
+```
+Access-Control-Allow-Origin: https://client.example.com:3302
+```
+
+**Important:**
+- Protocol, domain, and port must match exactly
+- Never use wildcards (`*`) in production
+- Each VideoX server needs CORS configured independently
+
+**For Nginx Reverse Proxy (Option 2):**
+
+No CORS configuration needed! Since frontend and backend are served from the same domain, all requests are same-origin.
+
+**Development Environment:**
+
+When running `npm run dev`:
+```
+Access-Control-Allow-Origin: http://localhost:3302
+```
+
+### General Security
+
+- Deploy the client over HTTPS in production
+- Use TLS certificates from a trusted CA
+- Restrict access to the client and VideoX servers to trusted networks or via VPN/reverse proxy
+- Do not expose the VideoX server or client directly to the internet without proper access control
+- Ensure all VideoX servers are also using HTTPS when the client uses HTTPS
+- Configure firewall rules to allow traffic only on ports 3302 (client) and 3002 (VideoX servers)
 
 ## Basic Usage (For Admins/Integrators)
 
@@ -124,8 +176,19 @@ The exact capabilities available depend on the VideoX server configuration.
 
 ### CORS / Browser Errors
 
-- If the browser reports CORS issues, update the VideoX server configuration to allow the client’s origin.
-- Ensure protocol (http/https), host, and port in the VideoX CORS configuration match the client URL exactly.
+**Symptom:** Browser console shows errors like:
+- "Access to fetch at '...' from origin '...' has been blocked by CORS policy"
+- "No 'Access-Control-Allow-Origin' header is present"
+
+**Solution:**
+1. Check the exact client URL in your browser (including protocol and port)
+2. Configure each VideoX server to allow that exact origin
+3. Verify the CORS configuration on the VideoX server side
+4. Ensure the origin matches exactly (protocol, domain, and port)
+5. Restart the VideoX server after changing CORS settings
+6. Clear browser cache and reload
+
+**Example:** If your client is at `https://client.example.com:3302`, the VideoX server CORS config must specify exactly that URL, not `http://...` or a different port.
 
 ### Login Fails
 

@@ -5,17 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 5174,
-    proxy: {
-      '/api': {
-        target: 'http://10.13.8.2:3002',
-        changeOrigin: true,
-      },
-      '/hls': {
-        target: 'http://10.13.8.2:3002',
-        changeOrigin: true,
-      },
-    },
+    port: 3302,
+    // Running behind nginx reverse proxy at videox.app
+    // Nginx handles /api/ and /hls/ routing to backend (10.13.8.2:3002)
+    // This dev server handles the frontend routes
   },
   build: {
     outDir: 'dist',
